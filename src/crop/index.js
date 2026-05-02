@@ -4,13 +4,11 @@ const s3 = new S3Client();
 
 exports.handler = async (event) => {
   for (const record of event.Records) {
-    // SQS nos pasa el evento de S3 dentro de su body
     const sqsBody = JSON.parse(record.body);
     const s3Event = sqsBody.Records[0];
     const srcBucket = s3Event.s3.bucket.name;
     const srcKey = decodeURIComponent(s3Event.s3.object.key.replace(/\+/g, " "));
 
-    // 1. Descargar imagen
     const getObj = await s3.send(new GetObjectCommand({ Bucket: srcBucket, Key: srcKey }));
     const streamToBuffer = async (stream) => {
       const chunks = [];
@@ -19,7 +17,6 @@ exports.handler = async (event) => {
     };
     const imageBuffer = await streamToBuffer(getObj.Body);
 
-    // 2. Recortar a círculo de 40x40
     const processedBuffer = await sharp(imageBuffer)
       .resize(40, 40)
       .composite([{
@@ -29,7 +26,6 @@ exports.handler = async (event) => {
       .png()
       .toBuffer();
 
-    // 3. Subir a processed/
     const destKey = srcKey.replace("uploads/", process.env.PROCESSED_PREFIX);
     await s3.send(new PutObjectCommand({
       Bucket: process.env.S3_BUCKET,

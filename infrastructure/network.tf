@@ -1,4 +1,3 @@
-# 1. La VPC Principal (DNS activado es obligatorio para los VPC Endpoints)
 resource "aws_vpc" "main" {
   cidr_block           = var.vpc_cidr
   enable_dns_support   = true
@@ -9,7 +8,6 @@ resource "aws_vpc" "main" {
   }
 }
 
-# 2. Subredes Públicas (10.0.1.0/24 y 10.0.2.0/24 según diagrama)
 resource "aws_subnet" "public" {
   count                   = 2
   vpc_id                  = aws_vpc.main.id
@@ -22,7 +20,6 @@ resource "aws_subnet" "public" {
   }
 }
 
-# 3. Subredes Privadas (10.0.11.0/24 y 10.0.12.0/24 según diagrama)
 resource "aws_subnet" "private" {
   count             = 2
   vpc_id            = aws_vpc.main.id
@@ -34,7 +31,6 @@ resource "aws_subnet" "private" {
   }
 }
 
-# 4. Internet Gateway y NAT Gateways (Alta Disponibilidad)
 resource "aws_internet_gateway" "igw" {
   vpc_id = aws_vpc.main.id
   tags   = { Name = "igw-${var.environment}" }
@@ -53,7 +49,6 @@ resource "aws_nat_gateway" "nat" {
   tags          = { Name = "nat-${var.environment}-${var.azs[count.index]}" }
 }
 
-# 5. Tablas de Enrutamiento (Pública y 2 Privadas)
 resource "aws_route_table" "public" {
   vpc_id = aws_vpc.main.id
   route {
@@ -73,7 +68,6 @@ resource "aws_route_table" "private" {
   tags = { Name = "rt-private-${var.environment}-${var.azs[count.index]}" }
 }
 
-# Asociaciones de Subredes
 resource "aws_route_table_association" "public" {
   count          = 2
   subnet_id      = aws_subnet.public[count.index].id
@@ -86,11 +80,6 @@ resource "aws_route_table_association" "private" {
   route_table_id = aws_route_table.private[count.index].id
 }
 
-# ==========================================
-# VPC ENDPOINTS (El núcleo de la seguridad Serverless)
-# ==========================================
-
-# 6. Gateway Endpoint para S3 (Gratis, no usa IPs)
 resource "aws_vpc_endpoint" "s3" {
   vpc_id            = aws_vpc.main.id
   service_name      = "com.amazonaws.us-east-1.s3"
@@ -100,7 +89,6 @@ resource "aws_vpc_endpoint" "s3" {
   tags = { Name = "vpce-s3-${var.environment}" }
 }
 
-# 7. Security Group para el Endpoint de SQS
 resource "aws_security_group" "vpce_sqs_sg" {
   name        = "sg-vpce-sqs-${var.environment}"
   description = "Permitir HTTPS interno hacia SQS"
@@ -113,8 +101,6 @@ resource "aws_security_group" "vpce_sqs_sg" {
     cidr_blocks = [var.vpc_cidr] # Solo permite tráfico de nuestra propia VPC
   }
 }
-
-# 8. Interface Endpoint para SQS
 resource "aws_vpc_endpoint" "sqs" {
   vpc_id              = aws_vpc.main.id
   service_name        = "com.amazonaws.us-east-1.sqs"
@@ -124,4 +110,4 @@ resource "aws_vpc_endpoint" "sqs" {
   private_dns_enabled = true
 
   tags = { Name = "vpce-sqs-${var.environment}" }
-}
+}   

@@ -10,17 +10,11 @@ resource "aws_sqs_queue" "image_queue" {
   })
 }
 
-# 2. Dead-Letter Queue (DLQ)
 resource "aws_sqs_queue" "image_dlq" {
   name                      = "image-processor-${var.environment}-image-dlq"
   message_retention_seconds = 1209600 # 14 días
 }
 
-# ==========================================
-# AMAZON S3 (Almacenamiento de Fotos)
-# ==========================================
-
-# 3. Bucket S3 Principal
 resource "random_string" "suffix" {
   length  = 6
   special = false
@@ -32,7 +26,6 @@ resource "aws_s3_bucket" "images" {
   force_destroy = true
 }
 
-# 4. Configuración de Notificación: S3 avisa a SQS
 resource "aws_s3_bucket_notification" "bucket_notification" {
   bucket = aws_s3_bucket.images.id
 
@@ -45,7 +38,6 @@ resource "aws_s3_bucket_notification" "bucket_notification" {
   depends_on = [aws_sqs_policy.allow_s3_logging]
 }
 
-# 5. Permiso para que S3 pueda escribir en la cola SQS
 resource "aws_sqs_policy" "allow_s3_logging" {
   queue_url = aws_sqs_queue.image_queue.id
   policy = jsonencode({
