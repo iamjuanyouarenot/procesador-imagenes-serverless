@@ -35,10 +35,11 @@ resource "aws_s3_bucket_notification" "bucket_notification" {
     filter_prefix = "uploads/"
   }
 
-  depends_on = [aws_sqs_policy.allow_s3_logging]
+  # ¡Corregido aquí!
+  depends_on = [aws_sqs_queue_policy.allow_s3_logging]
 }
 
-resource "aws_sqs_policy" "allow_s3_logging" {
+resource "aws_sqs_queue_policy" "allow_s3_logging" {
   queue_url = aws_sqs_queue.image_queue.id
   policy = jsonencode({
     Version = "2012-10-17"
